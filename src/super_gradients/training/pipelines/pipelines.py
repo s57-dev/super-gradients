@@ -171,7 +171,7 @@ class Pipeline(ABC):
         preprocessed_images, processing_metadatas = [], []
         for image in images:
             preprocessed_image, processing_metadata = self.image_processor.preprocess_image(image=image.copy())
-            preprocessed_images.append(preprocessed_image)
+            preprocessed_images.append(preprocessed_image.astype(np.single))
             processing_metadatas.append(processing_metadata)
 
         # Predict

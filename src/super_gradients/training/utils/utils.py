@@ -10,6 +10,7 @@ from functools import lru_cache, wraps
 from importlib import import_module
 from itertools import islice
 
+import collections.abc
 from pathlib import Path
 from typing import Mapping, Optional, Tuple, Union, List, Dict, Any, Iterable
 from zipfile import ZipFile
@@ -591,8 +592,7 @@ def ensure_is_tuple_of_two(inputs: Union[Any, Iterable[Any], None]) -> Union[Tup
     """
     if inputs is None:
         return None
-
-    if isinstance(inputs, typing.Iterable) and not isinstance(inputs, str):
+    if isinstance(inputs, collections.abc.Iterable) and not isinstance(inputs, str): 
         a, b = inputs
         return a, b
 

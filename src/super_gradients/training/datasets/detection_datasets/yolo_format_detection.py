@@ -133,37 +133,38 @@ class YoloDarknetFormatDetectionDataset(DetectionDataset):
         self.images_folder = os.path.join(self.data_dir, self.images_dir)
         self.labels_folder = os.path.join(self.data_dir, self.labels_dir)
 
-        all_images_file_names = list(image_name for image_name in os.listdir(self.images_folder) if is_image(image_name))
-        all_labels_file_names = list(label_name for label_name in os.listdir(self.labels_folder) if label_name.endswith(".txt"))
+        all_images_file_paths = [
+            os.path.join(dp, f)
+            for dp, dn, filenames in os.walk(self.images_folder)
+            for f in filenames
+            if is_image(f)
+        ]
+
+        all_labels_file_paths = []
+
+        for image_path in all_images_file_paths:
+            label_path = image_path.replace(self.images_folder, self.labels_folder).replace(os.path.splitext(image_path)[1], '.txt')
+            if label_path:
+                all_labels_file_paths.append(label_path)
 
         remove_file_extension = lambda file_name: os.path.splitext(os.path.basename(file_name))[0]
-        unique_image_file_base_names = set(remove_file_extension(image_file_name) for image_file_name in all_images_file_names)
-        unique_label_file_base_names = set(remove_file_extension(label_file_name) for label_file_name in all_labels_file_names)
 
-        images_not_in_labels = unique_image_file_base_names - unique_label_file_base_names
-        if images_not_in_labels:
-            logger.warning(f"{len(images_not_in_labels)} images are note associated to any label file")
+        valid_files = [os.path.exists(label_file) for label_file in all_labels_file_paths]
+        
+        valid_base_names = set(
+            remove_file_extension(image_file)
+            for image_file, valid in zip(all_images_file_paths, valid_files)
+            if valid
+        )
 
-        labels_not_in_images = unique_label_file_base_names - unique_image_file_base_names
-        if labels_not_in_images:
-            logger.warning(f"{len(labels_not_in_images)} label files are not associated to any image.")
-
-        # Only keep names that are in both the images and the labels
-        valid_base_names = unique_image_file_base_names & unique_label_file_base_names
-        if len(valid_base_names) != len(all_images_file_names):
+        if len(valid_base_names) != len(all_images_file_paths):
             logger.warning(
                 f"As a consequence, "
-                f"{len(valid_base_names)}/{len(all_images_file_names)} images and "
-                f"{len(valid_base_names)}/{len(all_labels_file_names)} label files will be used."
+                f"{len(valid_base_names)}/{len(all_images_file_paths)} images will be used."
             )
 
-        self.images_file_names = []
-        self.labels_file_names = []
-        for image_full_name in all_images_file_names:
-            base_name = remove_file_extension(image_full_name)
-            if base_name in valid_base_names:
-                self.images_file_names.append(image_full_name)
-                self.labels_file_names.append(base_name + ".txt")
+        self.images_file_names = [image for image, valid in zip(all_images_file_paths, valid_files) if valid]
+        self.labels_file_names = [label for label, valid in zip(all_labels_file_paths, valid_files) if valid]
         return len(self.images_file_names)
 
     def _load_annotation(self, sample_id: int) -> dict:
