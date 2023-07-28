@@ -102,16 +102,19 @@ class YoloXPostPredictionCallback(DetectionPostPredictionCallback):
         self.class_agnostic_nms = class_agnostic_nms
         self.multi_label_per_box = multi_label_per_box
 
-    def forward(self, x, device: str = None):
+    def forward(self, x: Union[torch.Tensor, Tuple[torch.Tensor, List[torch.Tensor]]], device: str = None):
         """Apply NMS to the raw output of the model and keep only top `max_predictions` results.
 
         :param x: Raw output of the model, with x[0] expected to be a list of Tensors of shape (cx, cy, w, h, confidence, cls0, cls1, ...)
         :return: List of Tensors of shape (x1, y1, x2, y2, conf, cls)
         """
+        # Use the main output features in case of multiple outputs.
+        if isinstance(x, (tuple, list)):
+            x = x[0]
 
         if self.nms_type == NMS_Type.ITERATIVE:
             nms_result = non_max_suppression(
-                x[0],
+                x,
                 conf_thres=self.conf,
                 iou_thres=self.iou,
                 with_confidence=self.with_confidence,
@@ -119,7 +122,7 @@ class YoloXPostPredictionCallback(DetectionPostPredictionCallback):
                 class_agnostic_nms=self.class_agnostic_nms,
             )
         else:
-            nms_result = matrix_non_max_suppression(x[0], conf_thres=self.conf, max_num_of_detections=self.max_pred, class_agnostic_nms=self.class_agnostic_nms)
+            nms_result = matrix_non_max_suppression(x, conf_thres=self.conf, max_num_of_detections=self.max_pred, class_agnostic_nms=self.class_agnostic_nms)
 
         return self._filter_max_predictions(nms_result)
 
@@ -520,17 +523,25 @@ class YoloBase(SgModule):
         )
         return pipeline
 
-    def predict(self, images: ImageSource, iou: Optional[float] = None, conf: Optional[float] = None, fuse_model: bool = True) -> ImagesDetectionPrediction:
+    def predict(
+        self,
+        images: ImageSource,
+        iou: Optional[float] = None,
+        conf: Optional[float] = None,
+        batch_size: int = 32,
+        fuse_model: bool = True,
+    ) -> ImagesDetectionPrediction:
         """Predict an image or a list of images.
 
-        :param images:  Images to predict.
-        :param iou:     (Optional) IoU threshold for the nms algorithm. If None, the default value associated to the training is used.
-        :param conf:    (Optional) Below the confidence threshold, prediction are discarded.
-                        If None, the default value associated to the training is used.
-        :param fuse_model: If True, create a copy of the model, and fuse some of its layers to increase performance. This increases memory usage.
+        :param images:      Images to predict.
+        :param iou:         (Optional) IoU threshold for the nms algorithm. If None, the default value associated to the training is used.
+        :param conf:        (Optional) Below the confidence threshold, prediction are discarded.
+                            If None, the default value associated to the training is used.
+        :param batch_size:  Maximum number of images to process at the same time.
+        :param fuse_model:  If True, create a copy of the model, and fuse some of its layers to increase performance. This increases memory usage.
         """
         pipeline = self._get_pipeline(iou=iou, conf=conf, fuse_model=fuse_model)
-        return pipeline(images)  # type: ignore
+        return pipeline(images, batch_size=batch_size)  # type: ignore
 
     def predict_webcam(self, iou: Optional[float] = None, conf: Optional[float] = None, fuse_model: bool = True):
         """Predict using webcam.
