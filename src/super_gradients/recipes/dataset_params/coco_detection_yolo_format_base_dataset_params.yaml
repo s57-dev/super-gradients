@@ -11,17 +11,17 @@ train_dataset_params:
              keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear,
              hair drier, toothbrush] # TO FILL: List of classes used in your dataset.
   input_dim: [640, 640]
-  cache_dir:
-  cache: False
+  cache_dir: data_cache
+  cache: True
   transforms:
     - DetectionMosaic:
         input_dim: ${dataset_params.train_dataset_params.input_dim}
         prob: 1.
     - DetectionRandomAffine:
-        degrees: 10.                  # rotation degrees, randomly sampled from [-degrees, degrees]
+        degrees: 20.                  # rotation degrees, randomly sampled from [-degrees, degrees]
         translate: 0.1                # image translation fraction
-        scales: [ 0.7, 2.5 ]              # random rescale range (keeps size by padding/cropping) after mosaic transform.
-        shear: 2.0                    # shear degrees, randomly sampled from [-degrees, degrees]
+        scales: [ 0.7, 4 ]              # random rescale range (keeps size by padding/cropping) after mosaic transform.
+        shear: 5.0                    # shear degrees, randomly sampled from [-degrees, degrees]
         target_size: ${dataset_params.train_dataset_params.input_dim}
         filter_box_candidates: True   # whether to filter out transformed bboxes by edge size, area ratio, and aspect ratio.
         wh_thr: 2                     # edge size threshold when filter_box_candidates = True (pixels)
@@ -30,13 +30,13 @@ train_dataset_params:
     - DetectionMixup:
         input_dim: ${dataset_params.train_dataset_params.input_dim}
         mixup_scale: [ 0.5, 2.0 ]         # random rescale range for the additional sample in mixup
-        prob: 1.0                       # probability to apply per-sample mixup
+        prob: 0.0                       # probability to apply per-sample mixup
         flip_prob: 0.5                  # probability to apply horizontal flip
     - DetectionHSV:
         prob: 1.0                       # probability to apply HSV transform
-        hgain: 5                        # HSV transform hue gain (randomly sampled from [-hgain, hgain])
-        sgain: 35                       # HSV transform saturation gain (randomly sampled from [-sgain, sgain])
-        vgain: 35                       # HSV transform value gain (randomly sampled from [-vgain, vgain])
+        hgain: 10                        # HSV transform hue gain (randomly sampled from [-hgain, hgain])
+        sgain: 45                       # HSV transform saturation gain (randomly sampled from [-sgain, sgain])
+        vgain: 45                       # HSV transform value gain (randomly sampled from [-vgain, vgain])
     - DetectionHorizontalFlip:
         prob: 0.5                       # probability to apply horizontal flip
     - DetectionVerticalFlip:
@@ -44,7 +44,7 @@ train_dataset_params:
     - DetectionRandomRotate90:
         prob: 0.5
     - DetectionRGB2BGR:
-        prob: 0.25
+        prob: 0.2
     - DetectionPaddedRescale:
         input_dim: ${dataset_params.train_dataset_params.input_dim}
     - DetectionTargetsFormatTransform:
